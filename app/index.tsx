@@ -26,16 +26,10 @@ export default function WelcomeScreen() {
         style={styles.primaryButton}
         onPress={() => router.push("/home")}
       >
-        <Text style={styles.primaryButtonText}>START FREE TRIAL</Text>
+        <Text style={styles.primaryButtonText}>Explore Now</Text>
       </TouchableOpacity>
 
       {/* Secondary Button */}
-      <TouchableOpacity
-        style={styles.secondaryButton}
-        onPress={() => router.push("/home")}
-      >
-        <Text style={styles.secondaryButtonText}>LATER</Text>
-      </TouchableOpacity>
     </View>
   );
 }

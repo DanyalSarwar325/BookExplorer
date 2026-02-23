@@ -1,33 +1,40 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import { nytRankToStars } from "../utils/ratingUtils";
 
 function param(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return value[0] ?? "";
   return value ?? "";
 }
 
-/** Render star icons for a rating (0–5) */
-function StarRating({ rating }: { rating: number }) {
+/** Render star icons using Ionicons */
+function StarRating({ rating, size = 20 }: { rating: number; size?: number }) {
   const stars = [];
   for (let i = 1; i <= 5; i++) {
     if (rating >= i) {
-      stars.push("★");
+      stars.push(<Ionicons key={i} name="star" size={size} color="#F59E0B" />);
     } else if (rating >= i - 0.5) {
-      stars.push("★"); // half‑star rendered as full for simplicity
+      stars.push(
+        <Ionicons key={i} name="star-half" size={size} color="#F59E0B" />,
+      );
     } else {
-      stars.push("☆");
+      stars.push(
+        <Ionicons key={i} name="star-outline" size={size} color="#D1D5DB" />,
+      );
     }
   }
-  return <Text style={styles.stars}>{stars.join(" ")}</Text>;
+  return <View style={{ flexDirection: "row", gap: 2 }}>{stars}</View>;
 }
 
 export default function BookDetail() {
@@ -95,6 +102,9 @@ export default function BookDetail() {
     ? displayPublishedDate.split("-")[0]
     : null;
 
+  // NYT-derived star rating (always available for bestsellers)
+  const nytStarRating = nytRank ? nytRankToStars(Number(nytRank)) : null;
+
   // Show spinner only while enrichment is loading
   if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" />;
 
@@ -114,8 +124,12 @@ export default function BookDetail() {
           onPress={() => router.back()}
           style={styles.headerBtn}
         >
-          <Text style={styles.headerIcon}>‹</Text>
+          <Ionicons name="arrow-back" size={20} color="#1F2937" />
         </TouchableOpacity>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          Book Details
+        </Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
@@ -123,42 +137,75 @@ export default function BookDetail() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Book Cover ── */}
-        {displayThumbnail && (
-          <View style={styles.coverWrapper}>
-            <Image
-              source={{ uri: displayThumbnail }}
-              style={styles.coverImage}
-              resizeMode="cover"
-            />
-          </View>
-        )}
+        {/* ── Hero section with cover ── */}
+        <View style={styles.heroSection}>
+          {displayThumbnail && (
+            <View style={styles.coverWrapper}>
+              <Image
+                source={{ uri: displayThumbnail }}
+                style={styles.coverImage}
+                resizeMode="cover"
+              />
+            </View>
+          )}
 
-        {/* ── Title & Author ── */}
-        <Text style={styles.title}>{displayTitle}</Text>
-        <Text style={styles.authors}>{displayAuthors}</Text>
+          <Text style={styles.title}>{displayTitle}</Text>
+          <Text style={styles.authors}>by {displayAuthors}</Text>
 
-        {/* ── Published ── */}
-        {publishedYear && (
-          <Text style={styles.published}>Published in {publishedYear}</Text>
-        )}
+          {/* ── Star Rating ── */}
+          {nytStarRating != null && (
+            <View style={styles.ratingContainer}>
+              <StarRating rating={nytStarRating} size={22} />
+              <Text style={styles.ratingValue}>{nytStarRating.toFixed(1)}</Text>
+              <Text style={styles.ratingLabel}>NYT Rating</Text>
+            </View>
+          )}
+        </View>
 
-        {/* ── Rating Row ── */}
-        {displayRating && (
-          <View style={styles.ratingRow}>
-            <StarRating rating={displayRating} />
-            <Text style={styles.ratingText}>
-              {displayRating.toFixed(1)}
-              {displayRatingsCount ? ` (${displayRatingsCount} reviews)` : ""}
-            </Text>
-          </View>
-        )}
+        {/* ── Quick Info Row ── */}
+        <View style={styles.infoRow}>
+          {publishedYear && (
+            <View style={styles.infoItem}>
+              <Ionicons name="calendar-outline" size={18} color="#6B7280" />
+              <Text style={styles.infoLabel}>Year</Text>
+              <Text style={styles.infoValue}>{publishedYear}</Text>
+            </View>
+          )}
+          {extra?.pageCount || passedPageCount ? (
+            <View style={styles.infoItem}>
+              <Ionicons
+                name="document-text-outline"
+                size={18}
+                color="#6B7280"
+              />
+              <Text style={styles.infoLabel}>Pages</Text>
+              <Text style={styles.infoValue}>
+                {extra?.pageCount ?? passedPageCount}
+              </Text>
+            </View>
+          ) : null}
+          {nytRank && (
+            <View style={styles.infoItem}>
+              <Ionicons name="trophy-outline" size={18} color="#F59E0B" />
+              <Text style={styles.infoLabel}>NYT Rank</Text>
+              <Text style={styles.infoValue}>#{nytRank}</Text>
+            </View>
+          )}
+          {nytWeeks && Number(nytWeeks) > 0 && (
+            <View style={styles.infoItem}>
+              <Ionicons name="time-outline" size={18} color="#6B7280" />
+              <Text style={styles.infoLabel}>Weeks</Text>
+              <Text style={styles.infoValue}>{nytWeeks}</Text>
+            </View>
+          )}
+        </View>
 
         {/* ── NYT Bestseller badge ── */}
         {nytRank && (
           <View style={styles.nytBadge}>
+            <Ionicons name="newspaper-outline" size={16} color="#92400E" />
             <Text style={styles.nytBadgeText}>
-              📰 #{nytRank} NYT Bestseller
+              #{nytRank} NYT Bestseller
               {nytWeeks && Number(nytWeeks) > 0
                 ? `  ·  ${nytWeeks} weeks on list`
                 : ""}
@@ -166,17 +213,46 @@ export default function BookDetail() {
           </View>
         )}
 
+        {/* ── Google Rating (if available) ── */}
+        {displayRating != null && (
+          <View style={styles.googleRatingRow}>
+            <Ionicons name="logo-google" size={14} color="#4285F4" />
+            <StarRating rating={displayRating} size={14} />
+            <Text style={styles.googleRatingText}>
+              {displayRating.toFixed(1)}
+              {displayRatingsCount
+                ? ` (${displayRatingsCount.toLocaleString()} reviews)`
+                : ""}
+            </Text>
+          </View>
+        )}
+
+        {/* ── Divider ── */}
+        <View style={styles.divider} />
+
         {/* ── About the Author ── */}
-        <Text style={styles.sectionTitle}>About the author</Text>
-        <Text style={styles.sectionBody}>
-          {buildAuthorBlurb(displayAuthors, displayTitle, publishedYear)}
-        </Text>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="person-outline" size={18} color="#1F2937" />
+            <Text style={styles.sectionTitle}>About the Author</Text>
+          </View>
+          <Text style={styles.sectionBody}>
+            {buildAuthorBlurb(displayAuthors, displayTitle, publishedYear)}
+          </Text>
+        </View>
 
         {/* ── Overview ── */}
-        <Text style={styles.sectionTitle}>Overview</Text>
-        <Text style={styles.sectionBody}>
-          {stripHtml(displayDescription ?? nytDesc ?? "No overview available.")}
-        </Text>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="book-outline" size={18} color="#1F2937" />
+            <Text style={styles.sectionTitle}>Overview</Text>
+          </View>
+          <Text style={styles.sectionBody}>
+            {stripHtml(
+              displayDescription ?? nytDesc ?? "No overview available.",
+            )}
+          </Text>
+        </View>
       </ScrollView>
 
       {/* ── Bottom Button ── */}
@@ -186,8 +262,14 @@ export default function BookDetail() {
           onPress={() => setIsRead(!isRead)}
           activeOpacity={0.8}
         >
+          <Ionicons
+            name={isRead ? "checkmark-circle" : "checkmark-circle-outline"}
+            size={20}
+            color="#fff"
+            style={{ marginRight: 8 }}
+          />
           <Text style={styles.readBtnText}>
-            {isRead ? "✓  Book Read" : "✓  Book Read"}
+            {isRead ? "Marked as Read" : "Mark as Read"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -218,36 +300,36 @@ function stripHtml(html: string): string {
 }
 
 /* ── Styles ── */
-const ACCENT = "#4DD9B4"; // Mint / teal green from Figma
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FAFBFC",
   },
 
   /* Header */
   header: {
     flexDirection: "row",
-    justifyContent: "flex-start",
+    justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingTop: 50,
     paddingBottom: 10,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FAFBFC",
   },
   headerBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#F2F2F2",
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
   },
-  headerIcon: {
-    fontSize: 24,
+  headerTitle: {
+    fontSize: 16,
     fontWeight: "600",
-    marginTop: -2,
+    color: "#1F2937",
   },
 
   /* Scroll */
@@ -255,112 +337,200 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    paddingBottom: 30,
+  },
+
+  /* Hero section */
+  heroSection: {
     alignItems: "center",
     paddingHorizontal: 24,
-    paddingBottom: 30,
+    paddingTop: 10,
+    paddingBottom: 20,
+    backgroundColor: "#fff",
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
 
   /* Cover */
   coverWrapper: {
-    marginTop: 10,
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
-    borderRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+    borderRadius: 14,
   },
   coverImage: {
-    width: 180,
-    height: 270,
-    borderRadius: 12,
+    width: 160,
+    height: 240,
+    borderRadius: 14,
   },
 
-  /* Title / Author / Published */
+  /* Title / Author */
   title: {
     fontSize: 22,
-    fontWeight: "700",
-    color: "#1A1A2E",
+    fontWeight: "800",
+    color: "#111827",
     textAlign: "center",
+    lineHeight: 28,
   },
   authors: {
-    fontSize: 15,
-    color: "#888",
+    fontSize: 14,
+    color: "#6B7280",
     textAlign: "center",
     marginTop: 4,
-  },
-  published: {
-    fontSize: 13,
-    color: "#AAA",
-    textAlign: "center",
-    marginTop: 4,
+    fontWeight: "500",
   },
 
   /* Rating */
-  ratingRow: {
-    flexDirection: "row",
+  ratingContainer: {
     alignItems: "center",
-    marginTop: 12,
-    gap: 8,
+    marginTop: 16,
   },
-  stars: {
-    fontSize: 18,
-    color: "#F5A623",
-    letterSpacing: 2,
+  ratingValue: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#1F2937",
+    marginTop: 4,
   },
-  ratingText: {
-    fontSize: 14,
-    color: "#666",
+  ratingLabel: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontWeight: "500",
+    marginTop: 2,
+  },
+
+  /* Quick info row */
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    marginTop: 16,
+    marginHorizontal: 16,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  infoItem: {
+    alignItems: "center",
+    gap: 4,
+  },
+  infoLabel: {
+    fontSize: 10,
+    color: "#9CA3AF",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  infoValue: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1F2937",
   },
 
   /* NYT badge */
   nytBadge: {
-    backgroundColor: "#FFF8E1",
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "center",
+    backgroundColor: "#FEF3C7",
     borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginTop: 16,
+    gap: 8,
     borderWidth: 1,
-    borderColor: "#FFE082",
+    borderColor: "#FDE68A",
   },
   nytBadgeText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#92400E",
+  },
+
+  /* Google rating */
+  googleRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "center",
+    marginTop: 12,
+    gap: 6,
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  googleRatingText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#6D4C00",
+    color: "#4B5563",
+    fontWeight: "500",
+  },
+
+  /* Divider */
+  divider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    marginHorizontal: 24,
+    marginTop: 20,
   },
 
   /* Sections */
+  section: {
+    paddingHorizontal: 24,
+    marginTop: 20,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
-    color: "#1A1A2E",
-    alignSelf: "flex-start",
-    marginTop: 24,
-    marginBottom: 8,
+    color: "#111827",
   },
   sectionBody: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: "#666",
-    alignSelf: "flex-start",
+    fontSize: 14,
+    lineHeight: 22,
+    color: "#4B5563",
   },
 
   /* Bottom button */
   bottomBar: {
     paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 34,
-    backgroundColor: "#FFFFFF",
+    paddingTop: 12,
+    paddingBottom: 36,
+    backgroundColor: "#FAFBFC",
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
   },
   readBtn: {
-    backgroundColor: ACCENT,
+    backgroundColor: "#10B981",
     borderRadius: 28,
     paddingVertical: 16,
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   readBtnActive: {
-    backgroundColor: "#3BBF9E",
+    backgroundColor: "#059669",
   },
   readBtnText: {
     color: "#FFFFFF",
@@ -373,6 +543,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FAFBFC",
   },
 });
