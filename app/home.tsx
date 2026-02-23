@@ -1,21 +1,20 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { fetchGoogleBooks } from "../services/googleService";
-import { fetchNYTBooks } from "../services/nytService";
+import { fetchMergedBooks, MergedBook } from "../services/bookService";
 
 export default function Home() {
-  const [books, setBooks] = useState<any[]>([]);
-  const [allBooks, setAllBooks] = useState<any[]>([]);
+  const [books, setBooks] = useState<MergedBook[]>([]);
+  const [allBooks, setAllBooks] = useState<MergedBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const router = useRouter();
@@ -25,16 +24,9 @@ export default function Home() {
   }, []);
 
   async function load() {
-    const google = await fetchGoogleBooks();
-    const nyt = await fetchNYTBooks();
-
-    const nytIsbns = nyt.map((b: any) => b.primary_isbn13);
-    const filtered = google.filter((b: any) => nytIsbns.includes(b.isbn13));
-
-    const finalBooks = filtered.length ? filtered : google;
-
-    setBooks(finalBooks);
-    setAllBooks(finalBooks);
+    const merged = await fetchMergedBooks();
+    setBooks(merged);
+    setAllBooks(merged);
     setLoading(false);
   }
 
@@ -68,7 +60,7 @@ export default function Home() {
       {/* ⭐ BOOK GRID */}
       <FlatList
         data={books}
-        keyExtractor={(i) => i.id}
+        keyExtractor={(i) => i.isbn13 ?? i.googleId ?? i.title}
         numColumns={2}
         showsVerticalScrollIndicator={false}
         columnWrapperStyle={{ justifyContent: "space-between" }}
@@ -78,15 +70,45 @@ export default function Home() {
             onPress={() =>
               router.push({
                 pathname: "/book-detail",
-                params: { id: item.id },
+                params: {
+                  id: item.googleId ?? "",
+                  isbn: item.isbn13,
+                  title: item.title,
+                  authors: item.authors.join(", "),
+                  thumbnail: item.thumbnail ?? item.nytBookImage ?? "",
+                  description: item.description ?? "",
+                  publishedDate: item.publishedDate ?? "",
+                  pageCount: item.pageCount ? String(item.pageCount) : "",
+                  averageRating: item.averageRating
+                    ? String(item.averageRating)
+                    : "",
+                  ratingsCount: item.ratingsCount
+                    ? String(item.ratingsCount)
+                    : "",
+                  nytRank: String(item.nytRank),
+                  nytWeeks: String(item.nytWeeksOnList),
+                  nytDesc: item.nytDescription,
+                },
               })
             }
           >
-            <Image source={{ uri: item.thumbnail }} style={styles.img} />
+            <Image
+              source={{ uri: item.thumbnail ?? item.nytBookImage }}
+              style={styles.img}
+            />
 
             <Text style={styles.title} numberOfLines={2}>
               {item.title}
             </Text>
+
+            <View style={styles.badgeRow}>
+              <Text style={styles.rankBadge}>#{item.nytRank} NYT</Text>
+              {item.nytWeeksOnList > 0 && (
+                <Text style={styles.weeksBadge}>
+                  {item.nytWeeksOnList}w on list
+                </Text>
+              )}
+            </View>
           </TouchableOpacity>
         )}
       />
@@ -142,5 +164,34 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 13,
     fontWeight: "600",
+  },
+
+  badgeRow: {
+    flexDirection: "row",
+    marginTop: 6,
+    gap: 4,
+    flexWrap: "wrap",
+  },
+
+  rankBadge: {
+    backgroundColor: "#FFD700",
+    color: "#333",
+    fontSize: 11,
+    fontWeight: "700",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    overflow: "hidden",
+  },
+
+  weeksBadge: {
+    backgroundColor: "#E0E7FF",
+    color: "#3B5998",
+    fontSize: 11,
+    fontWeight: "600",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    overflow: "hidden",
   },
 });
