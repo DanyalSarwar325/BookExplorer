@@ -17,7 +17,7 @@ export async function fetchNYTBooks(): Promise<NYTBook[]> {
     const KEY = process.env.EXPO_PUBLIC_NYT_KEY;
 
     const res = await fetch(
-      `https://api.nytimes.com/svc/books/v3/lists/current/hardcover-fiction.json?api-key=${KEY}`,
+      `https://api.nytimes.com/svc/books/v3/lists/current/hardcover-fiction.json?api-key=4A1qBblOqY8yGZnPDwbMN19L8gAQz6kuKfyTsRTqsm0ZpErh`,
     );
 
     const data = await res.json();

@@ -18,10 +18,10 @@ export async function fetchGoogleBooks(
   maxResults = 30,
 ): Promise<GoogleBook[]> {
   try {
-    const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_BOOKS_API_KEY;
+    // const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_BOOKS_API_KEY;
 
     const res = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${maxResults}&key=${API_KEY}`,
+      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${maxResults}&key=AIzaSyBQb9EjXSu4znS46ww6qvxSsYNyHwDDVsI`,
     );
 
     const data = await res.json();
